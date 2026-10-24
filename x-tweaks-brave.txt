@@ -64,6 +64,7 @@ x.com##button[aria-label*="Grok"]
 x.com##a[href="/i/grok"]
 x.com##a[href^="/i/grok"]
 x.com##a[aria-label="Grok"]
+x.com##[data-testid="grok-action-button"]
 x.com##div[role="menuitem"]:has-text(Grok):style(display: none !important)
 x.com##a:has-text(Grok):upward(1):style(display: none !important)
 ! --- Premium / Subscribe ---
