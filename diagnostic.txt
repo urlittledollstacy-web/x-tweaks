@@ -1,0 +1,49 @@
+[Adblock Plus 2.0]
+! Title: X reading tweaks - DIAGNOSTIC
+! Description: A tiny test list. It tells us whether Brave is applying cosmetic
+!   filters to x.com at all, separately from whether the real list's selectors
+!   are right. Install this INSTEAD of the real list, look at x.com, then
+!   report which of the three things below you see.
+! Homepage: https://github.com/urlittledollstacy-web/x-tweaks
+! Expires: 1 days
+! Version: 1.0.0
+!
+! ===========================================================================
+! READ THIS
+! ===========================================================================
+!
+! This list has three layers. Each one uses a different mechanism, so the
+! result tells us exactly where the problem is.
+!
+!   LAYER 1 - a plain CSS hide. This is the most basic cosmetic filter there
+!   is. If this does not work, Brave is not applying cosmetic filters to x.com
+!   at all, and no list of mine can work. The cause is almost always Shields
+!   being down for the site, or the URL not being in the right field.
+!
+!   LAYER 2 - a procedural :style() rule. This is the mechanism the real list
+!   uses for the bigger text. If layer 1 works but this does not, then Brave
+!   is applying plain hides but not procedural operators.
+!
+!   LAYER 3 - a procedural :has-text() rule. Same family as layer 2.
+!
+! ---------------------------------------------------------------------------
+! LAYER 1: hide the bookmark button on every post.
+! Expected: the bookmark (flag) icon disappears from the action row of posts.
+! This uses a plain CSS selector. No procedural operator.
+! ---------------------------------------------------------------------------
+x.com##[data-engagement-action="bookmark"]
+
+! ---------------------------------------------------------------------------
+! LAYER 2: turn tweet text bright red and huge.
+! Expected: post text turns red and becomes very large.
+! This uses :style(), a procedural operator.
+! ---------------------------------------------------------------------------
+x.com##article div[dir="auto"]:style(color: #ff0000 !important; font-size: 40px !important; line-height: 1.1 !important;)
+
+! ---------------------------------------------------------------------------
+! LAYER 3: hide the Grok entry in the left sidebar.
+! Expected: the Grok menu item disappears.
+! This uses :has-text(), a procedural operator.
+! ---------------------------------------------------------------------------
+x.com##a[href="/i/grok"]:style(display: none !important;)
+x.com##a:has-text(Grok):upward(1):style(display: none !important;)
