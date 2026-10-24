@@ -14,6 +14,8 @@ It does three things:
 3. **Declutter** — Grok, Premium, Calls, Ads, Creator Studio, Business and
    Lists removed from the menu.
 
+The sticky header is deliberately **not** touched.
+
 Separate project from `x-declutter` and `x-floating-bar` on purpose. Nothing is
 mixed between them.
 
@@ -35,7 +37,6 @@ list is fetched.
 | Tweet text | 17px, line-height 1.45 |
 | Display name | 16px |
 | Action row | pills hug their icons, `space-between`, 20px icons |
-| Header | solid background, blur removed |
 | Home feed | avatar beside the name, text and media full width |
 | Menu | Grok, Premium, Calls, Ads, Creator Studio, Business, Lists hidden |
 

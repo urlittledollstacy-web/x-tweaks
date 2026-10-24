@@ -159,8 +159,6 @@ PROBE = """() => {
     const row = q('article div:has(> [data-engagement-action])')
     out.rowDisplay = row ? cs(row).display : null
     out.rowJustify = row ? cs(row).justifyContent : null
-    const hdr = q('div[class*="backdrop-blur"][class*="sticky"]')
-    out.headerBlur = hdr ? cs(hdr).backdropFilter : null
     const feed = q('article div:has(> div[class*="w-10"] > div > a > div[class*="x-avatar"])')
     out.feedDisplay = feed ? cs(feed).display : null
     out.feedCols = feed ? cs(feed).gridTemplateColumns : null
@@ -305,8 +303,6 @@ def main():
                f"action row is flex (got {after['rowDisplay']})")
         expect(after["rowJustify"] == "space-between",
                f"action row is space-between (got {after['rowJustify']})")
-        expect(after["headerBlur"] == "none",
-               f"header blur removed (got {after['headerBlur']})")
         expect(after["feedDisplay"] == "grid",
                f"home feed row is grid (got {after['feedDisplay']})")
 
