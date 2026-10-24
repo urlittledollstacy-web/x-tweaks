@@ -38,7 +38,7 @@ workspace URL dies on every sandbox restart.
 Needs the Rust harness at `/tmp/abltest`, built **with the `css-validation`
 feature**. See below.
 
-## Three traps that cost real time
+## Four traps that cost real time
 
 ### 1. Bare procedural selectors are silently dead
 
@@ -84,6 +84,17 @@ bug against the harness. They are anchored with `href^="/..."` instead.
 The nav harness keeps those external links as controls (`want-ext-*`), so the
 bug cannot come back silently.
 
+### 4. Asserting a declaration is not asserting the layout
+
+The feed rules set `display: grid` on the correct element and the verifier
+asserted `display === "grid"`, and passed — while the layout was unchanged. The
+grid was applying; it just produced the same picture, because the rule that was
+meant to widen the text moved the wrong box. See "Feed row nesting" below.
+
+Assert geometry, not just declarations: relative positions and widths of the
+avatar, the name row and the text, plus the text width against the row width.
+`verify.py` now does this, and the old rule fails it.
+
 ## Testing notes
 
 ### The capture is server-rendered
@@ -120,9 +131,11 @@ works in Brave as ordinary CSS. Only the ABP-procedural operators
 ## Markup facts
 
 x.com today serves **no `data-testid`** attributes on the timeline elements the
-original userstyle targeted. A census of profile, home, search, status, settings
-and messages pages finds 0. X's own `styles-*.css` does not contain the string
-either. That is why every original selector was inert.
+original userstyle targeted. Confirmed against live pages (`/jack`, `/home`,
+`/jack/status/...` all return 0 occurrences) and against X's own
+`styles-*.css` bundle, which does not contain the string either. The source
+userstyle is https://userstyles.world/style/31054 and every one of its
+selectors was inert.
 
 The replacement markup uses `x-` prefixed classes (`x-avatar`,
 `x-engagement-pill`), `data-` attributes (`data-engagement-action`, `data-slot`,
@@ -131,6 +144,36 @@ The replacement markup uses `x-` prefixed classes (`x-avatar`,
 
 Useful anchors: the action row is `div:has(> [data-engagement-action])`; the
 home feed row is `div:has(> div[class*="w-10"] > div > a > div[class*="x-avatar"])`.
+
+### Feed row nesting (the trap that hid a dead rule)
+
+```
+row
+ ├─ div.w-10            avatar column
+ └─ div.flex-1          content column
+      ├─ div.gap-0.5    name/handle row
+      │    ├─ div.post-actions   name + handle + time
+      │    └─ div[dir=auto]      ...and, for SHORT posts, the tweet text
+      └─ div.gap-3      media, quote, buttons
+```
+
+The source userstyle dissolves `div.flex-1` and moves its `:first-child` (the
+name row) to column 2. On the old markup the name row held only the name. On
+the current markup it also holds the tweet text for short posts, so that rule
+drags the text into column 2 and the text never regains full width. The fix is
+to dissolve `div.gap-0.5` too and place only `div.post-actions` in column 2,
+sending `div[dir=auto]` to `grid-column: 1 / -1`.
+
+Measured: with the naive rule the text stays 520px wide in a 568px row, i.e.
+identical to no rule at all. With the fix it is 568px.
+
+### Action row pills
+
+X lays the engagement pills out as `flex: 1 1 0%`, so all four are 115px and
+each icon floats in the middle of empty space. The userstyle's
+`flex: 0 0 auto; width: auto` is what makes them hug their own content, which
+is the "no fixed widths, even spacing" its comment describes. Measured widths
+go from `[115, 115, 115, 115, 78]` to `[61, 72, 69, 75, 80]`.
 
 ## Local server
 

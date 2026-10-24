@@ -164,6 +164,29 @@ PROBE = """() => {
     const feed = q('article div:has(> div[class*="w-10"] > div > a > div[class*="x-avatar"])')
     out.feedDisplay = feed ? cs(feed).display : null
     out.feedCols = feed ? cs(feed).gridTemplateColumns : null
+    // Geometry, not just display. A grid that puts the avatar on its own row
+    // and never widens the text still reports display:grid, so checking the
+    // declaration alone passes a layout that looks unchanged.
+    if (feed) {
+        const fr = feed.getBoundingClientRect()
+        const av = feed.querySelector('div[class*="x-avatar"]')
+        const nm = feed.querySelector('div[class*="@container/post-actions"]')
+        const tx = feed.querySelector('div[dir="auto"][class*="whitespace-pre-wrap"]')
+        const rel = (e) => e ? {
+            x: Math.round(e.getBoundingClientRect().x - fr.x),
+            y: Math.round(e.getBoundingClientRect().y - fr.y),
+            w: Math.round(e.getBoundingClientRect().width),
+            h: Math.round(e.getBoundingClientRect().height),
+        } : null
+        out.feedRowW = Math.round(fr.width)
+        out.geoAvatar = rel(av)
+        out.geoName = rel(nm)
+        out.geoText = rel(tx)
+    }
+    if (row) {
+        out.pillWidths = [...row.children]
+            .map(c => Math.round(c.getBoundingClientRect().width))
+    }
     // visible-element counts, so a hide rule can be proven to have worked
     const visible = (s) => [...document.querySelectorAll(s)]
         .filter(e => cs(e).display !== 'none' && e.offsetParent !== null).length
@@ -286,6 +309,42 @@ def main():
                f"header blur removed (got {after['headerBlur']})")
         expect(after["feedDisplay"] == "grid",
                f"home feed row is grid (got {after['feedDisplay']})")
+
+        # Geometry, so a rule that runs but changes nothing cannot pass.
+        ga, gn, gt = after["geoAvatar"], after["geoName"], after["geoText"]
+        row_w = after["feedRowW"]
+        if ga and gn and gt:
+            # avatar and name are vertically centred on each other. Compare
+            # centres, not tops: the avatar is 40px and the name row is shorter,
+            # so align-self:center offsets their tops by design.
+            av_c = ga["y"] + ga["h"] / 2
+            nm_c = gn["y"] + gn["h"] / 2
+            expect(abs(av_c - nm_c) <= 6,
+                   f"avatar and name are centred on each other "
+                   f"(avatar centre={av_c}, name centre={nm_c})")
+            # name sits to the right of the avatar
+            expect(gn["x"] > ga["x"] + ga["w"] - 4,
+                   f"name is beside the avatar "
+                   f"(avatar x={ga['x']} w={ga['w']}, name x={gn['x']})")
+            # text starts under the name row, not beside it
+            expect(gt["y"] >= gn["y"] + gn["h"] - 4,
+                   f"tweet text is below the name row "
+                   f"(name bottom={gn['y'] + gn['h']}, text y={gt['y']})")
+            # text spans nearly the full row, i.e. it is full width again
+            expect(gt["w"] >= row_w - 8,
+                   f"tweet text is full width "
+                   f"(text w={gt['w']}, row w={row_w})")
+        else:
+            expect(False, "feed geometry probe found all of avatar, name and text")
+
+        # Action row: pills hug their content instead of equal 115px columns.
+        pills = after.get("pillWidths") or []
+        if pills:
+            expect(len(set(pills[:4])) > 1 or max(pills[:4]) < 115,
+                   f"action pills are not equal fixed-width columns (got {pills})")
+        else:
+            expect(False, "action row pill widths were probed")
+
         expect(after["articles"] == articles and articles > 0,
                f"fixture articles intact ({after['articles']}/{articles})")
         expect(after["vArticles"] == before["vArticles"] and articles > 0,

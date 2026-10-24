@@ -1,12 +1,14 @@
 [Adblock Plus 2.0]
 ! Title: X (Twitter) reading tweaks for Brave
 ! Description: A Stylus userstyle rebuilt as an adblock cosmetic filter list:
-!   bigger tweet text, bigger display names, an evenly spaced action row, a
-!   solid header, a roomier home feed, and a decluttered menu (Grok, Premium,
+!   bigger tweet text, bigger display names, a full-width action row with
+!   evenly spaced pills, a solid header, a home feed with the avatar beside the
+!   name and everything else full width, and a decluttered menu (Grok, Premium,
 !   Calls, Ads, Creator Studio, Business, Lists).
 ! Homepage: https://github.com/urlittledollstacy-web/x-tweaks
+! Source userstyle: https://userstyles.world/style/31054 (X test 2)
 ! Expires: 7 days
-! Version: 1.0.1
+! Version: 1.1.0
 !
 ! HOW TO USE (Brave, Android and desktop)
 !   1. Open  brave://settings/shields/filters
@@ -114,20 +116,32 @@ x.com##article div[class*="whitespace-pre-wrap"] span:style(font-size: inherit !
 x.com##article a[href] div[class*="font-bold"]:style(font-size: 16px !important; line-height: 1.35 !important;)
 
 ! ---------------------------------------------------------------------------
-! 3. ACTION ROW - flex, space-between, even spacing
+! 3. ACTION ROW - no fixed widths, even spacing
 ! ---------------------------------------------------------------------------
-! Was: article [role="group"] { display: flex; justify-content: space-between; }
-! The current action row is the div that holds the four reply/repost/like/
-! bookmark pills. It is identified by its children, which each carry
+! Was: article [role="group"] { display: flex; justify-content: space-between;
+!        padding-block: 10px; min-height: 52px; }
+!      article [role="group"] > div { flex: 0 0 auto; width: auto;
+!        min-width: 0; }
+!      article [role="group"] svg { width: 20px; height: 20px; }
+! The current action row is the div that holds the reply/repost/like/bookmark
+! pills. It is identified by its children, which each carry
 ! data-engagement-action, rather than by its own Tailwind classes, so the rule
-! survives a class rename. X already lays it out this way, so this rule is
-! mostly a guard that keeps the intent if X changes it, plus a little more
-! vertical room for thumbs.
-x.com##article div:has(> [data-engagement-action]):style(display: flex !important; justify-content: space-between !important; align-items: center !important; column-gap: 2px !important;)
-x.com##article div:has(> [data-engagement-action]) > div:style(flex: 1 1 0% !important; min-width: 0 !important;)
+! survives a class rename.
+!
+! The child rule is the part that changes anything: X lays the pills out as
+! equal-width columns (flex: 1 1 0%), so each pill is 115px and its icon floats
+! in the middle of empty space. The userstyle asks for flex: 0 0 auto with
+! width: auto, which makes each pill hug its own icon and count, and lets
+! space-between do the spacing. That is the "no fixed widths, even spacing"
+! the original comment describes.
+x.com##article div:has(> [data-engagement-action]):style(display: flex !important; justify-content: space-between !important; align-items: center !important; padding-block: 10px !important; min-height: 52px !important;)
+x.com##article div:has(> [data-engagement-action]) > div:style(flex: 0 0 auto !important; width: auto !important; min-width: 0 !important;)
 
-! Keep the pill labels and the little numbers on one line.
-x.com##article div:has(> [data-engagement-action]) [class*="tabular-nums"]:style(white-space: nowrap !important;)
+! The icons, up from X's 18.75px.
+x.com##article div:has(> [data-engagement-action]) svg:style(width: 20px !important; height: 20px !important;)
+
+! Keep the little numbers on one line, at the userstyle's 13px.
+x.com##article div:has(> [data-engagement-action]) [class*="tabular-nums"]:style(font-size: 13px !important; white-space: nowrap !important;)
 
 ! ---------------------------------------------------------------------------
 ! 4. STICKY HEADER - solid instead of see-through
@@ -141,25 +155,67 @@ x.com##article div:has(> [data-engagement-action]) [class*="tabular-nums"]:style
 x.com##div[class*="backdrop-blur"][class*="sticky"]:style(background-color: var(--x-bg-primary, #000) !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important;)
 
 ! ---------------------------------------------------------------------------
-! 5. HOME FEED - roomier rows
+! 5. HOME FEED - avatar beside the name, everything else full width
 ! ---------------------------------------------------------------------------
 ! Was, scoped with @-moz-document url-prefix("https://x.com/home"):
-!   article:has(> div > div > a > [data-testid="Tweet-User-Avatar"]) {
-!     display: grid; grid-template-columns: 40px 1fr; column-gap: 8px; }
-!   ... plus row-gap: 0 and a column on each child.
+!   ... div:has(> div > [data-testid="Tweet-User-Avatar"]) {
+!     display: grid; grid-template-columns: 38px minmax(0, 1fr);
+!     column-gap: 12px; row-gap: 6px; align-items: start; }
+!   ... > div:has(> [data-testid="Tweet-User-Avatar"]) { grid-column: 1;
+!     grid-row: 1; align-self: center; }
+!   ... > div:has(> [data-testid="Tweet-User-Avatar"]) + div {
+!     display: contents; }
+!   ... > div + div > :first-child { grid-column: 2; grid-row: 1;
+!     align-self: center; }
+!   ... > div + div > :not(:first-child) { grid-column: 1 / -1; min-width: 0; }
 !
-! :matches-path(/home/) is the replacement for the url-prefix scope. The feed
-! row is the direct child of article that holds the avatar column and the
-! content column.
-x.com##article div:matches-path(/home/):has(> div[class*="w-10"] > div > a > div[class*="x-avatar"]):style(display: grid !important; grid-template-columns: 40px minmax(0, 1fr) !important; column-gap: 8px !important; row-gap: 0 !important;)
+! The point of the style: the avatar and the name/handle share the top row,
+! then the tweet text, media and buttons span the full width underneath.
+!
+! Two things had to change for the current markup, and the first one is a real
+! trap. X now wraps the name row one level deeper than the userstyle assumed:
+!
+!   row
+!    ├─ div.w-10            avatar column
+!    └─ div.flex-1          content column
+!         ├─ div.gap-0.5    name/handle row
+!         │    ├─ div.post-actions   name + handle + time
+!         │    └─ div[dir=auto]      ...and, for short posts, the tweet text
+!         └─ div.gap-3      media, quote, buttons
+!
+! The userstyle's "+ div > :first-child" assumes the content column's first
+! child IS the name row. It is, but the name row also contains the tweet text
+! for short posts, so moving it to column 2 drags the text with it and the text
+! stops being full width. So the name row is dissolved too, and only the
+! .post-actions block inside it is placed in column 2.
+!
+! Without this, the grid moves the avatar into its own row and the text never
+! regains the width, which is the bug the first draft shipped: measured
+! identical to no rule at all.
+!
+! :matches-path(/home/) replaces the url-prefix scope. The avatar is matched by
+! the x-avatar class on the div inside its link, which is X's own hook and is
+! not a Tailwind utility.
+x.com##article div:matches-path(/home/):has(> div[class*="w-10"] > div > a > div[class*="x-avatar"]):style(display: grid !important; grid-template-columns: 40px minmax(0, 1fr) !important; column-gap: 8px !important; row-gap: 4px !important; align-items: start !important;)
 
-! The avatar column and the content column take their grid cells.
-x.com##article div:matches-path(/home/):has(> div[class*="w-10"] > div > a > div[class*="x-avatar"]) > div[class*="w-10"]:style(grid-column: 1 !important; grid-row: 1 !important;)
-x.com##article div:matches-path(/home/):has(> div[class*="w-10"] > div > a > div[class*="x-avatar"]) > div[class*="flex-1"]:style(grid-column: 2 !important; grid-row: 1 !important; min-width: 0 !important;)
+! Avatar: top-left cell.
+x.com##article div:matches-path(/home/):has(> div[class*="w-10"] > div > a > div[class*="x-avatar"]) > div[class*="w-10"]:style(grid-column: 1 !important; grid-row: 1 !important; align-self: center !important;)
 
-! The name/handle row is put back on one line after the grid move.
-x.com##article div:matches-path(/home/):has(> div[class*="w-10"] > div > a > div[class*="x-avatar"]) div[class*="@container/post-actions"]:style(display: flex !important; align-items: flex-start !important; justify-content: space-between !important; gap: 8px !important;)
-x.com##article div:matches-path(/home/):has(> div[class*="w-10"] > div > a > div[class*="x-avatar"]) > div[class*="flex-1"] > div[class*="gap-0.5"]:style(gap: 2px !important;)
+! The content column dissolves, so its children become grid items.
+x.com##article div:matches-path(/home/):has(> div[class*="w-10"] > div > a > div[class*="x-avatar"]) > div[class*="flex-1"]:style(display: contents !important;)
+
+! The name row dissolves as well, so the tweet text inside it can escape to
+! full width while the name stays beside the avatar.
+x.com##article div:matches-path(/home/):has(> div[class*="w-10"] > div > a > div[class*="x-avatar"]) > div[class*="flex-1"] > div[class*="gap-0.5"]:style(display: contents !important;)
+
+! Name, handle and time: top-right cell, level with the avatar.
+x.com##article div:matches-path(/home/):has(> div[class*="w-10"] > div > a > div[class*="x-avatar"]) div[class*="@container/post-actions"]:style(grid-column: 2 !important; grid-row: 1 !important; align-self: center !important; min-width: 0 !important;)
+
+! Tweet text: full width, on its own row under the name.
+x.com##article div:matches-path(/home/):has(> div[class*="w-10"] > div > a > div[class*="x-avatar"]) > div[class*="flex-1"] > div[class*="gap-0.5"] > div[dir="auto"]:style(grid-column: 1 / -1 !important; grid-row: 2 !important; min-width: 0 !important;)
+
+! Media, quote cards, buttons: full width too.
+x.com##article div:matches-path(/home/):has(> div[class*="w-10"] > div > a > div[class*="x-avatar"]) > div[class*="flex-1"] > :not(div[class*="gap-0.5"]):style(grid-column: 1 / -1 !important; min-width: 0 !important;)
 
 ! ---------------------------------------------------------------------------
 ! 6. DECLUTTER - menu entries the user does not want

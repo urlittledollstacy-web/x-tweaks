@@ -1,9 +1,18 @@
 # X reading tweaks (Brave)
 
 A Stylus userstyle for x.com rebuilt as a standalone adblock cosmetic filter
-list: bigger tweet text, bigger display names, an evenly spaced action row, a
-solid header, a roomier home feed, and a decluttered menu (Grok, Premium,
-Calls, Ads, Creator Studio, Business, Lists).
+list. The source userstyle is
+[X test 2](https://userstyles.world/style/31054) on userstyles.world.
+
+It does three things:
+
+1. **Bigger text** — tweet text at 17px/1.45, display names at 16px, and a
+   full-width action row whose pills hug their own icons instead of sitting in
+   equal-width columns.
+2. **Home feed layout** — the avatar sits beside the name, and everything else
+   (text, media, buttons) spans the full width. Only on `/home`.
+3. **Declutter** — Grok, Premium, Calls, Ads, Creator Studio, Business and
+   Lists removed from the menu.
 
 Separate project from `x-declutter` and `x-floating-bar` on purpose. Nothing is
 mixed between them.
@@ -25,9 +34,9 @@ list is fetched.
 |---|---|
 | Tweet text | 17px, line-height 1.45 |
 | Display name | 16px |
-| Action row | `flex`, `space-between`, evenly spaced |
+| Action row | pills hug their icons, `space-between`, 20px icons |
 | Header | solid background, blur removed |
-| Home feed row | avatar and body on a two-column grid |
+| Home feed | avatar beside the name, text and media full width |
 | Menu | Grok, Premium, Calls, Ads, Creator Studio, Business, Lists hidden |
 
 ## Why the original selectors stopped working
@@ -56,6 +65,16 @@ rule here therefore carries an explicit `:style(display: none !important)`.
 URLs, so a tweet linking to `https://example.com/i/lists` would lose its link.
 Every route rule is anchored to the relative form, `href^="/..."`. The test
 harness keeps external links as controls so this cannot regress.
+
+**Checking a declaration is not checking the layout.** An early version of the
+feed rules set `display: grid` on the right element, and the verifier asserted
+`display === "grid"` and passed — but the rules did nothing visible. X nests the
+name row one level deeper than the userstyle assumed, and for short posts the
+tweet text lives inside that name row, so moving the name row into the grid's
+second column dragged the text with it and the text never went full width. The
+verifier now asserts geometry: avatar and name centred on each other, name to
+the right of the avatar, text below the name row, and text as wide as the row.
+A rule that runs but changes nothing cannot pass.
 
 ## Files
 
