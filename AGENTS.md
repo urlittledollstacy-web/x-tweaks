@@ -40,6 +40,17 @@ feature**. See below.
 
 ## Four traps that cost real time
 
+### 0. Expires freezes the list, and ASCII matters
+
+`! Expires: 7 days` tells Brave to cache the list for a week. Any fix pushed
+inside that window is invisible to the user, which reads exactly like "your
+selectors do nothing". Keep it at `1 days` while iterating.
+
+Keep the file pure ASCII. The comment banners once used box-drawing characters;
+the list that worked on the same device was plain ASCII. There is no proof the
+characters broke parsing, but there is no reason to carry the difference either.
+Both files are asserted ASCII in the commit that removed them.
+
 ### 1. Bare procedural selectors are silently dead
 
 adblock-rust files a rule with no action as a *hide selector*. Brave injects
