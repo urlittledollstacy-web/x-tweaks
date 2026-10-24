@@ -1,0 +1,273 @@
+[Adblock Plus 2.0]
+! Title: X (Twitter) reading tweaks for Brave
+! Description: A Stylus userstyle rebuilt as an adblock cosmetic filter list:
+!   bigger tweet text, bigger display names, an evenly spaced action row, a
+!   solid header, a roomier home feed, and a decluttered menu (Grok, Premium,
+!   Calls, Ads, Creator Studio, Business, Lists).
+! Homepage: https://github.com/urlittledollstacy-web/x-tweaks
+! Expires: 7 days
+! Version: 1.0.1
+!
+! HOW TO USE (Brave, Android and desktop)
+!   1. Open  brave://settings/shields/filters
+!   2. Paste this URL into "Add custom filter list":
+!        https://raw.githubusercontent.com/urlittledollstacy-web/x-tweaks/main/x-tweaks-brave.txt
+!   3. Reload x.com. If nothing changes, force-stop Brave and reopen it so the
+!      list is fetched.
+!
+! ---------------------------------------------------------------------------
+! WHY YOUR OLD SELECTORS STOPPED WORKING
+! ---------------------------------------------------------------------------
+! Every selector in the original userstyle used data-testid, for example
+!   div[data-testid="tweetText"], [data-testid="User-Name"],
+!   article [role="group"], [data-testid="Tweet-User-Avatar"],
+!   [data-testid="primaryColumn"], [data-testid="TopNavBar"],
+!   .app-text-transition-container
+!
+! X shipped a new front end. On x.com today there is not one data-testid
+! attribute left: a census of the profile, home, search, status, settings and
+! messages pages finds 0. X's own stylesheet, styles-ZPhPmTLh.css, does not
+! contain the string "data-testid" either. So all of the above match 0
+! elements and the userstyle silently does nothing.
+!
+! The old class names are gone as well. X now uses a design system with
+! x- prefixed classes (x-avatar, x-engagement-pill, x-middot-group), data-
+! attributes (data-engagement-action, data-slot, data-icon), and plain
+! Tailwind utility classes.
+!
+! That is why this list exists. It keeps your intent and targets the markup
+! X actually serves now. Section 7 keeps the original data-testid rules as
+! comments so you can see the mapping.
+!
+! A note on the two hidden-data-testid survivors: X still ships a handful of
+! testids for a few small components (the toast viewport, the profile "Edit
+! profile" button) and for embedded tweets. None of them are the timeline
+! elements this list cares about, so they are not used here.
+!
+! ---------------------------------------------------------------------------
+! WHICH ENGINE FEATURES ARE USED, AND WHY THEY ARE SAFE
+! ---------------------------------------------------------------------------
+! Brave's ad blocker is adblock-rust. The operators below are the ones Brave
+! itself implements in
+!   components/cosmetic_filters/resources/data/procedural_filters.ts
+! They are :style(), :has(), :has-text(), :upward() and :matches-path().
+!
+! :has() is the important one. Your userstyle's feed rules needed
+!   article:has(> div > div > a > [data-testid="Tweet-User-Avatar"])
+! and the modern equivalent needs :has() too. Support for :has() landed in
+! adblock-rust 0.6.3, so any Brave from 2023 on has it.
+!
+! :matches-path() replaces the url-prefix part of the userstyle, which used
+!   @-moz-document url-prefix("https://x.com/home")
+! A hostname-scoped adblock rule cannot carry a path, so path scoping is done
+! with :matches-path() instead. It tests location.pathname + location.search.
+!
+! A caution that shapes every rule below: Brave turns a :style() body into
+!   [attr][attr]{...your declarations...}
+! and injects that as a stylesheet. Nested at-rules in that body DO work, as
+! CSS nesting: @media { ... } inside the braces parses and applies, verified in
+! Chromium. The rules below still keep to plain declarations, because none of
+! them needs a media query; every effect wanted here is wanted at all widths.
+!
+! A second caution, and this one bit the original list. adblock-rust files a
+! rule with NO action as a "hide selector". Brave then injects each hide
+! selector as plain CSS:
+!   selector { display: none !important; }
+! That is fine for a real CSS selector, but ":has-text(Grok)" and ":upward(1)"
+! are not CSS. The browser throws, Brave logs "ignored an invalid CSS
+! injection" to the console, and the entry stays visible. So every rule below
+! that uses a procedural operator carries an explicit
+! ":style(display: none !important)" instead of relying on the implicit hide.
+! The plain href and aria-label rules need no action and are left bare.
+!
+! A third caution, about testing. adblock-rust only splits procedural operators
+! into the step list Brave executes when it is built with the css-validation
+! feature, which Brave enables. A harness without that feature reports the
+! whole selector as one opaque css-selector step, which no browser can run, and
+! the list looks broken when it is fine. Check with css-validation on.
+!
+! A fourth caution, about href matching. Every route rule below is anchored to
+! the relative form with href^="/..." rather than href*="/...". The substring
+! form also matches absolute URLs, so a tweet that merely links to
+! https://example.com/i/lists would lose its link. An earlier project of ours
+! shipped that bug. All seven route rules here were confirmed to hide external
+! links until they were anchored, and the test harness keeps those links as
+! controls so the bug cannot come back.
+!
+! ---------------------------------------------------------------------------
+! 1. TWEET TEXT - bigger, looser
+! ---------------------------------------------------------------------------
+! Was: div[data-testid="tweetText"] { font-size: 17px; line-height: 1.45; }
+! X sets 15px/20px. The new text container is the dir="auto" block that wraps
+! the tweet body. The span inside it inherits the size, but it also carries a
+! text-[length:inherit] utility, so the size is set on the wrapper and the
+! span is nudged as well for good measure.
+x.com##article div[dir="auto"][class*="whitespace-pre-wrap"]:style(font-size: 17px !important; line-height: 1.45 !important;)
+x.com##article div[class*="whitespace-pre-wrap"] span:style(font-size: inherit !important; line-height: inherit !important;)
+
+! ---------------------------------------------------------------------------
+! 2. DISPLAY NAME - bigger
+! ---------------------------------------------------------------------------
+! Was: [data-testid="User-Name"] { font-size: 16px; }
+! X sets 15px on both the bold display name and the grey handle. Only the
+! display name is enlarged, which is what the userstyle asked for.
+x.com##article a[href] div[class*="font-bold"]:style(font-size: 16px !important; line-height: 1.35 !important;)
+
+! ---------------------------------------------------------------------------
+! 3. ACTION ROW - flex, space-between, even spacing
+! ---------------------------------------------------------------------------
+! Was: article [role="group"] { display: flex; justify-content: space-between; }
+! The current action row is the div that holds the four reply/repost/like/
+! bookmark pills. It is identified by its children, which each carry
+! data-engagement-action, rather than by its own Tailwind classes, so the rule
+! survives a class rename. X already lays it out this way, so this rule is
+! mostly a guard that keeps the intent if X changes it, plus a little more
+! vertical room for thumbs.
+x.com##article div:has(> [data-engagement-action]):style(display: flex !important; justify-content: space-between !important; align-items: center !important; column-gap: 2px !important;)
+x.com##article div:has(> [data-engagement-action]) > div:style(flex: 1 1 0% !important; min-width: 0 !important;)
+
+! Keep the pill labels and the little numbers on one line.
+x.com##article div:has(> [data-engagement-action]) [class*="tabular-nums"]:style(white-space: nowrap !important;)
+
+! ---------------------------------------------------------------------------
+! 4. STICKY HEADER - solid instead of see-through
+! ---------------------------------------------------------------------------
+! Was: [data-testid="TopNavBar"] { background: #000; backdrop-filter: none; }
+! The header and the tab strip are the two sticky bars that blur what scrolls
+! under them. Colour is left to X's own theme token, --x-bg-primary, which
+! resolves to --x-white in light mode and --x-black in dark mode, so this
+! stays correct in both themes. Only the translucency and the blur are
+! removed; the bar becomes opaque and readable.
+x.com##div[class*="backdrop-blur"][class*="sticky"]:style(background-color: var(--x-bg-primary, #000) !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important;)
+
+! ---------------------------------------------------------------------------
+! 5. HOME FEED - roomier rows
+! ---------------------------------------------------------------------------
+! Was, scoped with @-moz-document url-prefix("https://x.com/home"):
+!   article:has(> div > div > a > [data-testid="Tweet-User-Avatar"]) {
+!     display: grid; grid-template-columns: 40px 1fr; column-gap: 8px; }
+!   ... plus row-gap: 0 and a column on each child.
+!
+! :matches-path(/home/) is the replacement for the url-prefix scope. The feed
+! row is the direct child of article that holds the avatar column and the
+! content column.
+x.com##article div:matches-path(/home/):has(> div[class*="w-10"] > div > a > div[class*="x-avatar"]):style(display: grid !important; grid-template-columns: 40px minmax(0, 1fr) !important; column-gap: 8px !important; row-gap: 0 !important;)
+
+! The avatar column and the content column take their grid cells.
+x.com##article div:matches-path(/home/):has(> div[class*="w-10"] > div > a > div[class*="x-avatar"]) > div[class*="w-10"]:style(grid-column: 1 !important; grid-row: 1 !important;)
+x.com##article div:matches-path(/home/):has(> div[class*="w-10"] > div > a > div[class*="x-avatar"]) > div[class*="flex-1"]:style(grid-column: 2 !important; grid-row: 1 !important; min-width: 0 !important;)
+
+! The name/handle row is put back on one line after the grid move.
+x.com##article div:matches-path(/home/):has(> div[class*="w-10"] > div > a > div[class*="x-avatar"]) div[class*="@container/post-actions"]:style(display: flex !important; align-items: flex-start !important; justify-content: space-between !important; gap: 8px !important;)
+x.com##article div:matches-path(/home/):has(> div[class*="w-10"] > div > a > div[class*="x-avatar"]) > div[class*="flex-1"] > div[class*="gap-0.5"]:style(gap: 2px !important;)
+
+! ---------------------------------------------------------------------------
+! 6. DECLUTTER - menu entries the user does not want
+! ---------------------------------------------------------------------------
+! Your original rules, kept in spirit. The href checks still work because
+! those paths are stable; they are the ones that do the real work. The
+! :has-text() rules are a backstop for entries that are rendered as buttons
+! with no href. :upward(1) lifts the match from the label to its row, which is
+! how your original "a:has-text(Calls):upward(1)" worked.
+!
+! Every procedural rule here ends in ":style(display: none !important)" on
+! purpose; without an action the engine emits it as a hide selector and Brave
+! then hands ":has-text(...)" to the CSS parser, which rejects it. See the
+! note near the top of this file.
+!
+! If you WANT any of these, delete its lines (or prefix the line with "!").
+
+! --- Grok ---
+x.com##button[aria-label*="Grok"]
+x.com##a[href="/i/grok"]
+x.com##a[href^="/i/grok"]
+x.com##a[aria-label="Grok"]
+x.com##[data-testid="grok-action-button"]
+x.com##div[role="menuitem"]:has-text(Grok):style(display: none !important)
+x.com##a:has-text(Grok):upward(1):style(display: none !important)
+
+! --- Premium / Subscribe ---
+x.com##a[href^="/i/premium"]
+x.com##a[href^="/premium"]
+x.com##a[aria-label="Subscribe"]
+x.com##a[aria-label="Subscribe to Premium"]
+x.com##div[role="button"]:has-text(Subscribe):style(display: none !important)
+x.com##div[role="menuitem"]:has-text(Subscribe):style(display: none !important)
+
+! --- Calls ---
+x.com##a[href="/i/calls"]
+x.com##a[href^="/i/calls"]
+x.com##a[href="/calls"]
+x.com##div[role="menuitem"]:has-text(Calls):style(display: none !important)
+x.com##a:has-text(Calls):upward(1):style(display: none !important)
+
+! --- Ads ---
+x.com##a[href="/i/ads"]
+x.com##a[href^="/i/ads"]
+x.com##a[href="/i/ads_manager"]
+x.com##a[href="/ads"]
+x.com##div[role="menuitem"]:has-text(Ads):style(display: none !important)
+x.com##a:has-text(Ads):upward(1):style(display: none !important)
+
+! --- Creator Studio ---
+x.com##a[href^="/i/creator-studio"]
+x.com##a[href^="/i/creator_studio"]
+x.com##a[href^="/creator-studio"]
+x.com##div[role="menuitem"]:has-text(Creator Studio):style(display: none !important)
+x.com##a:has-text(Creator Studio):upward(1):style(display: none !important)
+
+! --- Business ---
+x.com##a[href="/i/business"]
+x.com##a[href^="/i/business"]
+x.com##a[href="/business"]
+x.com##div[role="menuitem"]:has-text(Business):style(display: none !important)
+x.com##a:has-text(Business):upward(1):style(display: none !important)
+
+! --- Lists ---
+x.com##a[href="/i/lists"]
+x.com##a[href^="/i/lists"]
+x.com##a[href="/lists"]
+x.com##div[role="menuitem"]:has-text(Lists):style(display: none !important)
+x.com##a:has-text(Lists):upward(1):style(display: none !important)
+
+! ---------------------------------------------------------------------------
+! 7. THE ORIGINAL USERSTYLE RULES, FOR REFERENCE
+! ---------------------------------------------------------------------------
+! These are what the file above replaces. They are all inert now, so they are
+! commented out rather than shipped. Keeping them here documents the mapping
+! from the userstyle to the new markup.
+!
+! x.com##button[aria-label="Grok actions"]
+! x.com##button[aria-label="Grok"]
+! x.com##div[data-testid="grok-action-button"]
+! x.com##a[href="/i/grok"]
+! x.com##a[aria-label="Grok"]
+! x.com##div[role="menuitem"]:has-text(Grok)
+! x.com##a[href*="/i/premium"]
+! x.com##a[href*="/premium"]
+! x.com##div[role="button"]:has(span:has-text("Subscribe"))
+! x.com##a[aria-label="Subscribe"]
+! x.com##a[aria-label="Subscribe to Premium"]
+! x.com##a[href="/i/calls"]
+! x.com##a[href="/calls"]
+! x.com##a[href="/i/calls/"]
+! x.com##div[role="menuitem"]:has-text(Calls)
+! x.com##a:has-text(Calls):upward(1)
+! x.com##a[href="/i/ads"]
+! x.com##a[href="/i/ads_manager"]
+! x.com##a[href="/ads"]
+! x.com##div[role="menuitem"]:has-text(Ads)
+! x.com##a:has-text(Ads):upward(1)
+! x.com##a[href="/i/creator-studio"]
+! x.com##a[href="/i/creator_studio"]
+! x.com##a[href="/creator-studio"]
+! x.com##div[role="menuitem"]:has-text(Creator Studio)
+! x.com##a:has-text(Creator Studio):upward(1)
+! x.com##a[href="/i/business"]
+! x.com##a[href="/business"]
+! x.com##div[role="menuitem"]:has-text(Business)
+! x.com##a:has-text(Business):upward(1)
+! x.com##a[href="/i/lists"]
+! x.com##a[href="/lists"]
+! x.com##div[role="menuitem"]:has-text(Lists)
+! x.com##a:has-text(Lists):upward(1)

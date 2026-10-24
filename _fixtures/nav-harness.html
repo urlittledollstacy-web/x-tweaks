@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head><meta charset="utf-8"><title>X nav harness</title></head>
+<body>
+<!--
+  A synthetic stand-in for the logged-in X navigation, which the logged-out
+  capture cannot contain. It carries the same hrefs, aria-labels, roles and
+  label text that the real menu uses, so the declutter rules can be exercised
+  for real: each entry carries data-probe, and the test asserts its computed
+  display.
+
+  data-want="1" marks a control that must survive. Controls deliberately share
+  the tag, role and shape of the entries that are removed, so a rule that is
+  too broad shows up as a control going missing.
+
+  Every element the test inspects carries data-probe and, unless it is a
+  control, its own hide rule. Nothing is left to inherit a parent's
+  display:none, because an inherited hide would not prove the rule itself
+  matched.
+-->
+<nav aria-label="Primary" id="nav">
+
+  <!-- menu destinations, by href -->
+  <a href="/i/grok" data-probe="grok-link">Grok</a>
+  <a href="/i/grok/chat" data-probe="grok-link-2">Grok chat</a>
+  <button aria-label="Grok actions" data-probe="grok-btn">Grok actions</button>
+  <button aria-label="Grok" data-probe="grok-btn-2">Grok</button>
+  <div data-testid="grok-action-button" data-probe="grok-testid">Grok</div>
+
+  <a href="/i/premium" data-probe="premium">Premium</a>
+  <a href="/premium" data-probe="premium-2">Premium signup</a>
+  <a aria-label="Subscribe" data-probe="subscribe-a">Subscribe</a>
+  <a aria-label="Subscribe to Premium" data-probe="subscribe-a2">Subscribe</a>
+
+  <a href="/i/calls" data-probe="calls">Calls</a>
+  <a href="/calls" data-probe="calls-2">Calls</a>
+
+  <a href="/i/ads" data-probe="ads">Ads</a>
+  <a href="/i/ads_manager" data-probe="ads-2">Ads manager</a>
+  <a href="/ads" data-probe="ads-3">Ads</a>
+
+  <a href="/i/creator-studio" data-probe="studio">Creator Studio</a>
+  <a href="/i/creator_studio" data-probe="studio-2">Creator Studio</a>
+  <a href="/creator-studio" data-probe="studio-3">Creator Studio</a>
+
+  <a href="/i/business" data-probe="business">Business</a>
+  <a href="/business" data-probe="business-2">Business</a>
+
+  <a href="/i/lists" data-probe="lists">Lists</a>
+  <a href="/lists" data-probe="lists-2">Lists</a>
+
+  <!-- menu rows rendered without an href: only :has-text() can catch these -->
+  <div role="menuitem" data-probe="mi-grok"><span>Grok</span></div>
+  <div role="menuitem" data-probe="mi-calls"><span>Calls</span></div>
+  <div role="menuitem" data-probe="mi-ads"><span>Ads</span></div>
+  <div role="menuitem" data-probe="mi-studio"><span>Creator Studio</span></div>
+  <div role="menuitem" data-probe="mi-business"><span>Business</span></div>
+  <div role="menuitem" data-probe="mi-lists"><span>Lists</span></div>
+  <div role="menuitem" data-probe="mi-subscribe"><span>Subscribe to Premium</span></div>
+
+  <!-- the :has(span:has-text()) shape the original userstyle used -->
+  <div role="button" data-probe="btn-subscribe"><span>Subscribe</span></div>
+
+  <!-- the :upward(1) shape: a bare link whose enclosing row must go. The row
+       carries its own probe; the link inside is not probed separately because
+       hiding the row is the intended outcome. -->
+  <div class="row" data-probe="row-calls"><a href="/somewhere">Calls</a></div>
+  <div class="row" data-probe="row-lists"><a href="/somewhere-else">Lists</a></div>
+
+  <!-- CONTROLS: must remain visible -->
+  <a href="/settings" data-probe="want-settings" data-want="1">Settings</a>
+  <a href="/bookmarks" data-probe="want-bookmarks" data-want="1">Bookmarks</a>
+  <a href="/i/communities" data-probe="want-communities" data-want="1">Communities</a>
+  <div role="menuitem" data-probe="want-mi-profile" data-want="1"><span>Profile</span></div>
+  <div role="button" data-probe="want-btn-post" data-want="1"><span>Post</span></div>
+  <div class="row" data-probe="want-row-analytics" data-want="1"><a href="/i/analytics">Analytics</a></div>
+
+  <!-- External links posted inside a tweet. A substring rule such as
+       a[href*="/i/lists"] would match these if it is not anchored to relative
+       URLs, which is exactly the false positive that bit the sibling project:
+       an unrelated outbound link would vanish from the timeline. -->
+  <article data-probe="want-ext-article" data-want="1">
+    <a href="https://example.com/i/lists" data-probe="want-ext-lists" data-want="1">a list</a>
+    <a href="https://example.com/premium" data-probe="want-ext-premium" data-want="1">premium</a>
+    <a href="https://example.com/i/ads" data-probe="want-ext-ads" data-want="1">ads</a>
+    <a href="https://example.com/i/calls" data-probe="want-ext-calls" data-want="1">calls</a>
+    <a href="https://example.com/i/business" data-probe="want-ext-business" data-want="1">business</a>
+    <a href="https://example.com/creator-studio" data-probe="want-ext-studio" data-want="1">studio</a>
+    <a href="https://example.com/i/grok" data-probe="want-ext-grok" data-want="1">grok</a>
+  </article>
+
+  <!-- A post whose text mentions Ads and Lists. The :has-text() rules are
+       scoped to menu roles and to links, so this must survive. -->
+  <article data-probe="want-article" data-want="1">
+    <div dir="auto" class="text-body whitespace-pre-wrap">Great talk about Ads and Lists today</div>
+  </article>
+</nav>
+</body>
+</html>
