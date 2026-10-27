@@ -18,7 +18,7 @@
 ! This file is pure ASCII on purpose, and Expires is one day so updates arrive.
 !
 ! 1. BIGGER TEXT
-!    Was: div[data-testid="tweetText"] { font-size: 17px; line-height: 1.45; }
+!    Was: div[data-testid="tweetText"] { font-size: 15px; line-height: 1.45; }
 !    X sets 15px/20px. The text container is the dir="auto" block that wraps it.
 x.com##article div[dir="auto"][class*="whitespace-pre-wrap"]:style(font-size: 17px !important; line-height: 1.45 !important;)
 x.com##article div[class*="whitespace-pre-wrap"] span:style(font-size: inherit !important; line-height: inherit !important;)
